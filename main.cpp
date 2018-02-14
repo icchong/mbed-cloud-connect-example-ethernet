@@ -29,6 +29,10 @@
 // Placeholder to hardware that trigger events (timer, button, etc)
 Ticker timer;
 
+// Placeholder for storage
+SDBlockDevice sd(PTE3, PTE1, PTE2, PTE4);
+FATFileSystem fs("sd");
+
 // Pointers to the resources that will be created in main_application().
 static MbedCloudClientResource* pattern_ptr;
 
@@ -42,12 +46,13 @@ void button_press() {
 }
 
 void pattern_updated(const char *) {
-    printf("PUT received, new value: %s\n", pattern_ptr->get_value());
+    printf("PUT received, new value: %s\n", pattern_ptr->get_value().c_str());
     // Placeholder for PUT action
 }
 
 void blink_callback(void *) {
-    const char *pattern = pattern_ptr->get_value();
+    String pattern_str = pattern_ptr->get_value();
+    const char *pattern = pattern_str.c_str();
     printf("POST received. LED pattern = %s\n", pattern);
     // Placeholder for POST action
     // The pattern is something like 500:200:500, so parse that.
@@ -71,10 +76,6 @@ int main(void)
 
     // Placeholder for network
     EthernetInterface net;
-
-    // Placeholder for storage
-    SDBlockDevice sd(PTE3, PTE1, PTE2, PTE4);
-    FATFileSystem fs("sd");
 
     printf("Start Simple Mbed Cloud Client\n");
 
@@ -129,17 +130,17 @@ int main(void)
     button->set_value("0");
     button->methods(M2MMethod::GET);
     button->observable(true);
-    button->attach_notification(M2MMethod::GET, (void*)button_callback);
+    button->attach_notification_callback(button_callback);
 
     MbedCloudClientResource *pattern = mbedClient.create_resource("3201/0/5853", "pattern_resource");
     pattern->set_value("500:500:500:500");
     pattern->methods(M2MMethod::GET | M2MMethod::PUT);
-    pattern->attach(M2MMethod::PUT, (void*)pattern_updated);
+    pattern->attach_put_callback(pattern_updated);
     pattern_ptr = pattern;
 
     MbedCloudClientResource *blink = mbedClient.create_resource("3201/0/5850", "blink_resource");
     blink->methods(M2MMethod::POST);
-    blink->attach(M2MMethod::POST, (void*)blink_callback);
+    blink->attach_post_callback(blink_callback);
 
     mbedClient.register_and_connect();
 
