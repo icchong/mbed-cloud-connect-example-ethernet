@@ -14,7 +14,6 @@
             "mbed-trace.enable": null
         },
         "K64F": {
-            "target.mbed_app_start": "0x00020400",
             "update-client.application-details": "0x00020000",
             "update-client.bootloader-details": "0x172e4"
         }
@@ -23,14 +22,6 @@
         "developer-mode": {
             "help": "Enable Developer mode to skip Factory enrollment",
             "value": 1
-        },
-        "button-pinname": {
-            "help": "PinName for button.",
-            "value": "BUTTON1"
-        },
-        "led-pinname": {
-            "help": "PinName for led, which is attached to led blink resource.",
-            "value": "LED_RED"
         }
     }
 }
