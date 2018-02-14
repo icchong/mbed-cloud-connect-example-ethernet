@@ -10,7 +10,6 @@
         "*": {
             "platform.stdio-baud-rate": 115200,
             "platform.stdio-convert-newlines": true,
-            "mbed-client.event-loop-size": 1024,
             "mbed-trace.enable": null
         }
     },
