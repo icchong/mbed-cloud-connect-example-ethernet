@@ -26,7 +26,8 @@
 #include "FATFileSystem.h"
 #include "EthernetInterface.h"
 
-InterruptIn button(BUTTON1);
+// Placeholder to hardware that trigger events (timer, button, etc)
+Ticker timer;
 
 // Pointers to the resources that will be created in main_application().
 static MbedCloudClientResource* pattern_ptr;
@@ -109,8 +110,8 @@ int main(void)
         printf("IP address %s\n", ip_addr);
     }
 
-    // Placeholder for GET requests. Initialize button interrupt.
-    button.fall(&button_press);
+    // Placeholder for callback to update local resource when GET comes.
+    timer.attach(&button_press, 5.0);
 
     SimpleMbedCloudClient mbedClient(&net);
     // Save pointer to mbedClient so that other functions can access it.
@@ -149,7 +150,7 @@ int main(void)
 
         if (button_pressed) {
             button_pressed = false;
-            printf("Button clicked %d times\r\n", ++button_count);
+            printf("Simulated button clicked %d times\r\n", ++button_count);
             button->set_value(button_count);
         }
     }
