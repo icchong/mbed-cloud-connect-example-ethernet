@@ -111,9 +111,6 @@ int main(void)
         printf("IP address %s\n", ip_addr);
     }
 
-    // Placeholder for callback to update local resource when GET comes.
-    timer.attach(&button_press, 5.0);
-
     SimpleMbedCloudClient mbedClient(&net);
     // Save pointer to mbedClient so that other functions can access it.
     client = &mbedClient;
@@ -143,6 +140,14 @@ int main(void)
     blink->attach_post_callback(blink_callback);
 
     mbedClient.register_and_connect();
+
+    // Wait for client to finish registering
+    while (!mbedClient.is_client_registered()) {
+        wait_ms(100);
+    }
+
+    // Placeholder for callback to update local resource when GET comes.
+    timer.attach(&button_press, 5.0);
 
     // Check if client is registering or registered, if true sleep and repeat.
     while (mbedClient.is_register_called()) {
