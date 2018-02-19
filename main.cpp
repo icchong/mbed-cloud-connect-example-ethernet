@@ -26,23 +26,35 @@
 #include "FATFileSystem.h"
 #include "EthernetInterface.h"
 
+/* The following app uses Mbed Cloud with SD Card storage, button, & led */
+
 // Placeholder to hardware that trigger events (timer, button, etc)
-Ticker timer;
+//Ticker timer;
+/* K64 & K66                 */ 
+InterruptIn sw2(SW2);
+DigitalOut led2(LED2);
+/*                           */
 
 // Placeholder for storage
+/* K64 & K66                                    */
 SDBlockDevice sd(PTE3, PTE1, PTE2, PTE4);
 FATFileSystem fs("sd");
-
+/*                                              */
+ 
 // Pointers to the resources that will be created in main_application().
 static MbedCloudClientResource* pattern_ptr;
+static MbedCloudClientResource* button_ptr;
 
 // Pointer to mbedClient, used for calling close function.
 static SimpleMbedCloudClient *client;
 
 static bool button_pressed = false;
-
+static int button_count = 0;
+      
 void button_press() {
     button_pressed = true;
+    ++button_count;
+    button_ptr->set_value(button_count);
 }
 
 void pattern_updated(const char *) {
@@ -56,6 +68,26 @@ void blink_callback(void *) {
     printf("POST received. LED pattern = %s\n", pattern);
     // Placeholder for POST action
     // The pattern is something like 500:200:500, so parse that.
+    // LED blinking is done while parsing.
+
+    while (*pattern != '\0') {
+        //make a short blink on the led
+        led2 = 0;
+        wait_ms(20);
+        led2 = 1; 
+        // Wait for requested time.
+        wait_ms(atoi(pattern));                
+        // Search for next value.
+        pattern = strchr(pattern, ':');
+        if(!pattern) {
+            //we're done, give one last blink to end the pattern
+            led2 = 0;
+            wait_ms(20);
+            led2 = 1; 
+            break; // while
+        }
+        pattern++;
+    }
 }
 
 void button_callback(const M2MBase& object, const NoticationDeliveryStatus status)
@@ -128,7 +160,8 @@ int main(void)
     button->methods(M2MMethod::GET);
     button->observable(true);
     button->attach_notification_callback(button_callback);
-
+    button_ptr = button;
+    
     MbedCloudClientResource *pattern = mbedClient.create_resource("3201/0/5853", "pattern_resource");
     pattern->set_value("500:500:500:500");
     pattern->methods(M2MMethod::GET | M2MMethod::PUT);
@@ -147,18 +180,24 @@ int main(void)
     }
 
     // Placeholder for callback to update local resource when GET comes.
-    timer.attach(&button_press, 5.0);
-
+    //timer.attach(&button_press, 5.0);
+      sw2.mode(PullUp);
+      sw2.fall(button_press);
+      button_count = 0;
+      
     // Check if client is registering or registered, if true sleep and repeat.
     while (mbedClient.is_register_called()) {
-        static int button_count = 0;
+        //static int button_count = 0;
+    
         wait_ms(100);
 
         if (button_pressed) {
             button_pressed = false;
-            printf("Simulated button clicked %d times\r\n", ++button_count);
-            button->set_value(button_count);
+            //printf("button clicked %d times\r\n", ++button_count);
+            //button->set_value(button_count);
+            printf("button clicked %d times\r\n", button_count);            
         }
+        
     }
 
     // Client unregistered, exit program.
