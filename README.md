@@ -1,32 +1,42 @@
-# Simple Mbed Cloud Client template application
+# Simple Pelion Device Management Client
+
 
 ## Overview
 
-This is a template application for platform vendors. It demonstrates how to create a simple Mbed Cloud Client application that can connect to Mbed Cloud, register resources and get ready to receive a firmware update.
+This is a template application that demonstrates how to create a simple application that can connect to the Pelion IoT Platform service, register resources and get ready to receive a firmware update.
 
-It's intended to be customized to add platform-specific features (such as sensors and actuators) and configure the connectivity and storage to work **out-of-the-box**. The Simple Mbed Cloud Client template application works in **developer mode** by default.
+It is customized to add platform-specific features (such as sensors and actuators) and the connectivity and storage is configured to work **out-of-the-box**. The template application works in **developer mode** by default.
 
-## Setup process
 
-This is a summary of the process for developers to get started and get a device connected to Mbed Cloud.
+## Table of Contents
+
+1. [Getting started with the application](#getting-started-with-the-application)
+2. [Porting to a new platform](#porting-to-a-new-platform)
+3. [Enabling firmware updates](#enabling-firmware-updates)
+4. [Automated testing](#automated-testing)
+5. [Known issues](#known-issues)
+
+## Getting started with the application
+
+This is a summary of the process for developers to get started and get a device connected to Pelion Device Management Client.
 
 ### Mbed Online IDE
 
 1. Import the application into the Online IDE.
-2. Add the API key to establish connection to Mbed Cloud.
+2. Add the API key to establish connection.
 3. Install the developer certificate.
 4. Compile and program.
 
 ### Mbed CLI tools
 
-1. Import the application in developer's desktop:
+1. Import the application into your desktop:
 
     ```
     mbed import https://os.mbed.com/teams/mbed-os-examples/code/mbed-cloud-example
     cd mbed-cloud-example
     ```
 
-2. Download the developer certificate from Mbed Cloud.
+2. Download the developer certificate from the Pelion Device Management [portal](https://portal.mbedcloud.com).
 3. Compile and program:
 
     ```
@@ -37,39 +47,33 @@ This is a summary of the process for developers to get started and get a device 
 
 ### Requirements
 
-The hardware requirements for Mbed OS platforms to support Mbed Cloud Client are [here](https://cloud.mbed.com/docs/current/cloud-requirements/index.html).
+The hardware requirements for Mbed OS platforms to support Pelion Client are [here](https://cloud.mbed.com/docs/current/cloud-requirements/index.html).
 
-In general, to start creating a secure connected product, you need a microcontroller that has the following features.
+In general, to start creating a secure connected product, you need a microcontroller that has the following features:
+
 * RAM: 96K or more
 * Flash: 512K or more
 * True Random Number Generator (TRNG)
 * Real Time Clock (RTC)
 
-Additionally, to use Mbed Cloud Client, the microcontroller needs to support the following in Mbed OS (latest version preferred) or in a compatible driver library:
+Additionally, to use the Device Management Client, the microcontroller needs to support the following in Mbed OS (latest version preferred) or in a compatible driver library:
+
 * A storage device (SDcard, SPI Flash, Data Flash)
-* IP connectivity (Ethernet, WiFi, Cellular, 6LoWPAN, Thread)
+* IP connectivity (Ethernet, Wi-Fi, Cellular, 6LoWPAN, Thread)
 
 For the Firmware update over the air (FOTA), you need the following:
-* [FlashIAP](https://github.com/ARMmbed/mbed-os/blob/master/drivers/FlashIAP.h) - Flash In-Application Programming (IAP)
-* [Mbed Bootloader](https://github.com/ARMmbed/mbed-bootloader) or a bootloader compatible with Mbed Cloud Client.
+
+* [FlashIAP](https://github.com/ARMmbed/mbed-os/blob/master/drivers/FlashIAP.h) - Flash In-Application Programming (IAP).
+* [Mbed Bootloader](https://github.com/ARMmbed/mbed-bootloader) or a compatible bootloader.
+* TCP connection - the current Firmware Download client only supports HTTP download over TCP (this will be resolved in a future release, so that CoAP blockwise transfer will be used for UDP connections).
 
 ### References
 
-* Check which Mbed OS platforms are supported in the [Mbed Cloud quick-start guide](https://cloud.test.mbed.com/quick-start).
-* Check which storage options are available [here](https://os.mbed.com/docs/v5.8/reference/storage.html).
-* Check which network options are available [here](https://os.mbed.com/docs/v5.8/reference/network-socket.html).
+* Check which Mbed OS platforms are supported in the [Pelion Device Management quick-start guide](https://cloud.mbed.com/quick-start).
+* Check which storage options are available [here](https://os.mbed.com/docs/latest/reference/storage.html).
+* Check which network options are available [here](https://os.mbed.com/docs/latest/reference/network-socket.html).
 
 
-### Porting steps
-
-Supporting a new derivative platform requires the following steps:
-
-* Fork the template and create an example application for your platform in https://os.mbed.com.
-* (Optional) Change the connectivity interface. Ethernet is the default - see `main.cpp`.
-* (Optional) Change the filesystem and/or the block device for storage. FAT filesystem over SD card is the default. See `main.cpp`.
-* (Optional) Make minor changes in `mbed_app.json` to support multiple platforms with same connectivity and storage.
-
-<span class="notes">**Note:** Make sure that the application works out-of-the-box and no changes are required in the `main.cpp` file. The goal is to deliver a great UX to our developers.</span>
 
 ### Porting example
 
@@ -77,26 +81,59 @@ In this example, an app with an SD card and on-chip Ethernet is taken to a custo
 
 #### Changing the storage option
 
-##### For an SD card
+<span class="notes">**Note:** From Mbed OS 5.10+, block device drivers have been moved to `mbed-os/components/storage/blockdevice` and many platforms have a default block device interface. </span>
 
-1. Add the SD card driver (`sd-driver.lib`) if it is not already added.
+##### Non-default storage configuration
 
-    On the command line:
+If you wish to override the default storage configuration or add support for storage, you can add the configuration into the `mbed_app.json` file. For example:
+
+```json
+    "K64F": {
+        "target.features_add"  : ["STORAGE"],
+        "target.components_add": ["SD"],
+        "sd.SPI_MOSI"  : "D11",
+        "sd.SPI_MISO"  : "D12",
+        "sd.SPI_CLK"   : "D13",
+        "sd.SPI_CS"    : "D10"
+    }
+```
+
+##### Example of default storage configuration using Mbed OS 5.10+
+
+1. Include the header files for the FAT file system:
+
+    ```cpp
+    #include "FATFileSystem.h"
+    ```
+
+2. Declare the global object for the default block device driver:
+
+    ```cpp
+    BlockDevice* bd = BlockDevice::get_default_instance();
+    ```
+
+3. Declare the global objects for the file system:
+
+    ```cpp
+    FATFileSystem fs("sd", bd);
+    ```
+
+##### Example of SD card configuration using Mbed OS 5.9 and older
+
+1. Add the SD card driver (`sd-driver.lib`) if it is not already added. On the command line:
 
     ```
     mbed add https://github.com/armmbed/sd-driver
     ```
 
-2. In the online compiler, click **Import**, then click here to import from URL.
-3. Then enter https://github.com/armmbed/sd-driver for the **Source URL** and **Import As:** Library.
-4. Include the header files for the SD driver and FAT file system:
+2. Include the header files for the SD driver and FAT file system:
 
     ```cpp
     #include "SDBlockDevice.h"
     #include "FATFileSystem.h"
     ```
 
-5. Declare the global objects for the SD card and file system.
+3. Declare the global objects for the SD card and file system:
 
     ```cpp
     SDBlockDevice bd(SPI_MOSI, SPI_MISO, SPI_CLK, SPI_CS);
@@ -111,17 +148,19 @@ For example, if the SPI signals for the SD card interface are connected on an Ar
 SDBlockDevice sd(D11, D12, D13, D10);
 ```
 
+<span class="notes">**Note:** The default mounting point is `sd`. This can be overridden in the `mbed_app.json` file using `PAL_FS_MOUNT_POINT_PRIMARY` and `PAL_FS_MOUNT_POINT_SECONDARY`. See [documentation](https://cloud.mbed.com/docs/current/porting/port-filesystem.html).</span>
+
 ##### For SPI Flash (devices that support SFDP)
 
 <Please note that this section of the document is under construction.  More information is needed.>
 
-1. Add the SPI Flash driver (`spif-driver`) if it is not already added.
+1. Add the SPI Flash driver (`spif-driver`) if it is not already added:
 
     ```
     mbed add https://github.com/ARMmbed/spif-driver
     ```
 
-2. Include the header files for the SPI Flash driver and LitteFS file system. For SPI Flash, we recommend LittleFS file system which supports wear leveling.
+2. Include the header files for the SPI Flash driver and LitteFS file system. For SPI Flash, we recommend LittleFS file system which supports wear leveling:
 
     ```cpp
     #include "SPIFBlockDevice.h"
@@ -143,39 +182,97 @@ SDBlockDevice sd(D11, D12, D13, D10);
 
 #### Changing the network interface
 
-##### For Ethernet
+<span class="notes">**Note:** From Mbed OS 5.10, platforms have a default network interface defined in `mbed-os/targets/targets.json`. If you wish to override the default configuration, you can add the configuration into the `mbed_app.json` file.</span>
+
+##### Non-default network configuration
+
+If you wish to override the default network configuration, you can add the configuration into the `mbed_app.json` file. For example:
+
+```json
+    "K64F": {
+        "target.network-default-interface-type" : "WIFI",
+        "esp8266.rx"                            : "D0",
+        "esp8266.tx"                            : "D1",
+        "esp8266.provide-default"               : true,
+        "nsapi.default-wifi-security"           : "WPA_WPA2",
+        "nsapi.default-wifi-ssid"               : "\"SSID\"",
+        "nsapi.default-wifi-password"          : "\"Password\""
+    }
+```
+
+##### Example of network initialization for Ethernet using Mbed OS 5.10+
+
+1. Declare the network interface object:
+   
+    ```
+    EthernetInterface * net = NetworkInterface::get_default_instance();
+    ```
+
+2. Connect the interface:
+   
+    ```
+    status = net->connect();
+    ```
+
+3. When the Client is started, pass the network interface:
+    ```
+    SimpleMbedCloudClient client(net, &sd, &fs);
+    ```
+
+##### Example of network initialization for Wi-Fi using Mbed OS 5.10+
+
+1. Declare the network interface object:
+   
+    ```
+    WiFiInterface *net = WiFiInterface::get_default_instance();
+    ```
+
+2. Connect the interface:
+   
+    ```
+    status  = net->connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    ```
+
+3. When the Client is started, pass the network interface:
+
+    ```
+    SimpleMbedCloudClient client(net, &sd, &fs);
+    ```
+
+
+##### Example of network initialization for Ethernet using Mbed OS 5.9 and older versions
 
 The Ethernet interface is included within Mbed OS, so you do not need to add a library.
 
-1. Include the header file for the interface.
+1. Include the header file for the interface:
 
     ```
     #include "EthernetInterface.h"
     ```
 
-2. Declare the network interface object.
+2. Declare the network interface object:
 
     ```
     EthernetInterface net;
     ```
 
-3. Connect the interface.
+3. Connect the interface:
 
     ```
     status = net.connect();
     ```
 
-4. When the Mbed Cloud Client is started, pass the network interface.
+4. When the Client is started, pass the network interface:
 
     ```
     SimpleMbedCloudClient client(&net, &sd, &fs);
     ```
 
-##### For WiFi
+##### Example of network initialization for Wi-Fi using Mbed OS 5.9 and older versions
 
-This example references the ESP8266 WiFi module, but the instructions are applicable to other modules.
+This example references the ESP8266 Wi-Fi module, but the instructions are applicable to other modules.
 
-1. Add the ESP8266 WiFi interface driver (esp8266-driver) if it is not already added.
+1. Add the ESP8266 Wi-Fi interface driver (esp8266-driver) if it is not already added:
 
     ```
     Mbed add https://github.com/ARMmbed/esp8266-driver
@@ -183,14 +280,32 @@ This example references the ESP8266 WiFi module, but the instructions are applic
 
     <span class="notes">**Note:** You may have to update the firmware inside the ESP8266 module.</span>
 
-2. Include the header file for the interface.
+2. Include the header file for the interface:
 
     ```cpp
     #include "ESP8266Interface.h"
     ```
 
-3. Add the driver configuration information in `mbed_app.json` (located at the top level of the Mbed Cloud Connect example project).
+3. Declare the network interface object:
 
+    ```cpp
+    ESP8266Interface net(D1, D0);
+    ```
+
+4. Connect the interface:
+
+    ```cpp
+    nsapi_error_t status = net.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
+    ```
+
+5. When the Client is started, pass the network interface:
+
+    ```cpp
+    SimpleMbedCloudClient client(&net, &sd, &fs);
+    ```
+
+6. Add the Wi-Fi credentials information in `mbed_app.json` (located at the top level of the example project):
+   
     ```json
         "config": {
             "wifi-ssid": {
@@ -204,31 +319,13 @@ This example references the ESP8266 WiFi module, but the instructions are applic
         }
     ```
 
-4. Declare the network interface object.
-
-    ```cpp
-    ESP8266Interface net(D1, D0);
-    ```
-
-5. Connect the interface.
-
-    ```cpp
-    nsapi_error_t status = net.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2);
-    ```
-
-6. When the Mbed Cloud Client is started, pass the network interface.
-
-    ```cpp
-    SimpleMbedCloudClient client(&net, &sd, &fs);
-    ```
-
 #### Changing the target MCU
 
 To change the target board to another board that is supported by Mbed OS, simply change the target name.
 
 ##### Using the command line
 
-Use the -m option.
+Use the -m option. For example:
 
 ```
 mbed compile -m Hexiwear -t GCC_ARM
@@ -240,7 +337,7 @@ Click the platform name on the top right corner, then select another platform.
 
 ##### Using an IDE
 
-First re-export (create project files) for the target with the command line.
+First re-export (create project files) for the target with the command line. For example:
 
 ```
 mbed export -m Hexiwear -i uvision
@@ -254,7 +351,7 @@ Read the Mbed OS [Contributing](https://os.mbed.com/docs/latest/reference/portin
 
 The template example uses a ticker object to periodically fire a software interrupt to simulate button presses. Let’s say you want to make an actual button press.
 
-By default, there is a Ticker object, which fires every five seconds and invokes a callback function.
+By default, there is a Ticker object, which fires every five seconds and invokes a callback function:
 
 ```cpp
 Ticker timer;
@@ -282,79 +379,134 @@ If you want to change this to an actual button, here is how to do it:
     timer.attach(eventQueue.event(&fake_button_press), 5.0);
     ```
 
-1. Declare an `InterruptIn` object on the button, and attach the callback function to the `fall` handler:
+2. Declare an `InterruptIn` object on the button, and attach the callback function to the `fall` handler:
 
     ```cpp
     InterruptIn btn(BUTTON1);
     btn.fall(eventQueue.event(&fake_button_press), 5.0);
     ```
 
-1. Rename `fake_button_press` to `real_button_press`.
+3. Rename `fake_button_press` to `real_button_press`.
 
 
-#### Updating the LwM2M objects
+#### Pelion Client v1.3.x SOTP-specific changes
 
-See guide at [TODO]
+The version v1.3+ introduces a new feature called Software One-Time Programming (SOTP) that makes use of the internal flash of the MCU as an One-Time-Programmable section. It stores the keys required to decrypt the credentials stored in the persistent storage. Read more on this in the [porting documentation](https://cloud.mbed.com/docs/current/porting/changing-a-customized-porting-layer.html#rtos-module) under the RTOS module section.
 
-## Enabling firmware updates
+The flash must be divided into two sections (default 2, maximum 2) for your target. You need to modify the `mbed_app.json` file as follows:
 
-To enable firmware updates, a compatible bootloader needs to be added in the `tools/` folder. The process to merge the application with the bootloader currently only works when building with Mbed CLI. In the future, this combine process will be done automatically by Mbed tools.
+1. Add a section to the `target_overrides` with SOTP addresses and sizes.
 
-1. Compile [mbed-bootloader](https://github.com/armmbed/mbed-bootloader) for the platform and storage configuration used in this application. Place the binary in the tools folder.
-
-1. Add a section to `mbed_app.json` under `target_overrides` with the bootloader configuration. For example:
+    You can find the memory map information in the reference manual of your MCU. Note the sectors should be placed at the last two sectors of the flash, so the SOTP region is preserved during drag and drop programming of binaries. This is an example for the K64F board:
 
     ```json
         "K64F": {
-            "target.mbed_app_start"            : "0x0000a400",
-            "update-client.bootloader-details" : "0x00007188",
             "sotp-section-1-address"           : "(32*1024)",
             "sotp-section-1-size"              : "( 4*1024)",
             "sotp-section-2-address"           : "(36*1024)",
             "sotp-section-2-size"              : "( 4*1024)",
-            "update-client.application-details": "(40*1024)"
         }
     ```
 
-Next, instruct your users to do the following:
+2. Add the macro definition to the "config" section. Note that the address and size macros are already provided. You only need to add the macro for the number of sections:
 
-1. Install the [manifest tool](https://github.com/armmbed/manifest-tool).
-1. Generate an update certificate:
-
-    ```
-    $ manifest-tool init -a YOUR_MBED_CLOUD_API_KEY -d yourdomain.com -m device-model-id -q --force
-    ```
-
-    <span class="notes">**Note:** Make sure to replace `YOUR_MBED_CLOUD_API_KEY` with an Mbed Cloud API key.
-
-1. Build the application and combine it with the bootloader:
-
-    ```
-    $ mbed compile -m YOUR_TARGET -t GCC_ARM
-    $ tools/combine_bootloader_with_app.py -m YOUR_TARGET -a BUILD/YOUR_TARGET/GCC_ARM/simple-mbed-cloud-client-example_application.bin -o combined.bin
+    ```json
+        "sotp-num-sections": {
+            "help": "Number of SOTP sections",
+            "macro_name": "PAL_INT_FLASH_NUM_SECTIONS",
+            "value": null
+        }
     ```
 
-1. Flash `combined.bin` to the development board.
-1. Write down the endpoint ID of the board. You need it to start the update.
+## Enabling firmware updates
 
-Now, a firmware update can be scheduled as explained in the [Mbed Cloud documentation](https://cloud.mbed.com/docs/current/updating-firmware/index.html). You can do it with the manifest tool itself or via the Mbed Cloud portal. Here we explain how to do it with the manifest tool.
+Mbed OS 5.10 and Mbed CLI 1.8 simplifies the process to enable and perform Firmware Updates. Here is a summary on how to configure the device and verify its correct behaviour.
 
-1. Change the application, for example by changing some strings in `main.cpp`.
-1. Compile the application:
+For full documentation about bootloaders and firmware update, read the following documents:
+
+- [Introduccion to bootloaders](https://os.mbed.com/docs/latest/porting/bootloader.html)
+- [Creating and using a bootloader](https://os.mbed.com/docs/latest/tutorials/bootloader.html)
+- [Bootloader configuration in Mbed OS](https://os.mbed.com/docs/latest/tools/configuring-tools.html)
+- [Mbed Bootloader for Pelion Device Management Client](https://github.com/ARMmbed/mbed-bootloader)
+- [Updating devices with Arm Mbed CLI](https://os.mbed.com/docs/latest/tools/cli-update.html)
+  
+This is a summary to use Arm Mbed OS managed bootloaders.
+
+#### Preparing a bootloader
+
+If Mbed OS contains a default pre-built bootloader in `mbed-os/feature/FEATURE_BOOTLOADER`, then you can skip this section.
+
+Otherwise, you'll need to compile the [mbed-bootloader](https://github.com/armmbed/mbed-bootloader) and add it to your application. Once it's done, we recommend to send a Pull-Requests to [Mbed OS](https://github.com/ARMmbed/mbed-os) to contribute with a default bootloader for your Mbed Enabled platform.
+
+You can see an example of bootloader configuration for the `K64F` in `bootloader/mbed_app.json`. This is compatible with the `mbed_app.json` configuration in this template application.
+
+<span class="notes">**Note:** Make sure the configuration for the bootloader (`mbed_app.json`) corresponds with the configuration of your application's `mbed_app.json`, otherwise the bootloader may not be able to find an application or apply the new firmware.</span>
+
+#### Enabling the application to use a bootloader 
+
+##### Option 1: default & prebuilt bootloader
+
+If Mbed OS contains a prebuilt bootloader for the target, then you can indicate to use it in the `mbed_app.json`. For example:
 
     ```
-    $ mbed compile -m YOUR_TARGET -t GCC_ARM
+    {
+        "target_overrides": {
+            "K64F": {
+                "target.features_add": ["BOOTLOADER"]
+            }
+        }
+    }
     ```
 
-1. The manifest tool can both sign the update - using the private key generated earlier - and upload it to Mbed Cloud in a single command. Run:
+##### Option 2: custom bootloader
+
+If you'd like to overide a default bootloader or use a custom one available in the application, then indicate the path to the booloader, `app_offset` and `header_offset` parameters in `mbed_app.json`. For example:
 
     ```
-    $ manifest-tool update device -p BUILD/YOUR_BOARD_NAME/GCC_ARM/simple-mbed-cloud-client-example_application.bin -D YOUR_ENDPOINT_NAME
+    "target_overrides": {
+            "K64F": {
+                "target.app_offset": "0xa400",
+                "target.header_offset": "0xa000",
+                "target.bootloader_img": "bootloader/my_bootloader.bin"
+            }
+        }
     ```
 
-    Replace `YOUR_BOARD_NAME` with the name of your development board, and replace `YOUR_ENDPOINT_NAME` with the endpoint name in Mbed Cloud.
+You may need to specify `header_format` as well. You could include the default header format from [Mbed OS](https://github.com/ARMmbed/mbed-os/blob/master/features/FEATURE_BOOTLOADER/mbed_lib.json) by adding `"target.features_add": ["BOOTLOADER"]`.
 
-1. Inspect the logs on the device to see the update progress. It looks similar to:
+#### Verifying that firmware update works
+
+Follow these steps to generate a manifest, compile and perform a firmware update of your device:
+
+1. Configure the API key for your Pelion account.
+
+     If you don't have an API key available, then login in [Pelion IoT Platform portal](https://portal.mbedcloud.com/), navigate to 'Access Management', 'API keys' and create a new one. Then specify the API key as global `mbed` configuration:
+
+    ```
+    mbed config -G CLOUD_SDK_API_KEY <your-api-key>
+    ```
+
+2. Initialize the device management feature:
+
+    ```
+    mbed dm init -d "company.com" --model-name "product-model" -q --force
+    ```
+
+3. Compile the application, include the firware update credentials generated before, merge with the bootloader and program the device:
+
+    ```
+    mbed compile -t <target> -m <toolchain> -c -f
+    ```
+
+4. Open a serial terminal, verify the application boots and is able to register to the Device Management service. Write down the `<endpoint ID>`, as it's required to identify the device to perform a firmware update.
+
+5. Update the firmware of the device through Mbed CLI:
+   
+    ```
+    mbed dm update device -D <device ID>
+    ```
+    
+    Inspect the logs on the device to see the update progress. It should look similar to:
 
     ```
     Firmware download requested
@@ -362,7 +514,15 @@ Now, a firmware update can be scheduled as explained in the [Mbed Cloud document
     Downloading: [+++- ] 6 %
     ```
 
-1. When the download completes, the firmware is verified. If everything is OK, the firmware update is applied.
+    When the download completes, the firmware is verified. If everything is OK, the firmware update is applied, the device reboots and attemps to connect to the Device Management service again. The `<endpoint ID>` should be preserved.
+
+## Automated testing
+
+The Simple Pelion Client provides Greentea tests to confirm your platform works as expected. The network and storage configuration is already defined in Mbed OS 5.10, but you may want to override the configuration in `mbed_app.json`.
+
+For details on Simple Pelion Client testing, refer to the documentation [here](https://github.com/ARMmbed/simple-mbed-cloud-client/tree/def_network#tests).
+
+This template application contains a working application and tests passing for the `K64F` and `K66F` platforms.
 
 ## Known issues
 
